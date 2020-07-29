@@ -5,7 +5,7 @@ import json
 import logging
 import websockets
 
-logging.basicConfig()
+logging.basicConfig(level=logging.INFO)
 
 STATE = {"on": False}
 
@@ -34,7 +34,11 @@ async def lightswitch(websocket, path):
     await register(websocket)
     try:
         await websocket.send(state_event())
+        remote_ip = websocket.remote_address[0]
+        user_agent = websocket.request_headers["User-Agent"]
+        logging.error(f"{remote_ip} connected; {user_agent}")
         async for message in websocket:
+            logging.info(f"Message from {remote_ip}")
             data = json.loads(message)
             STATE["on"] = data["on"]
             await notify_state()
