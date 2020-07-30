@@ -36,9 +36,10 @@ async def lightswitch(websocket, path):
         await websocket.send(state_event())
         remote_ip = websocket.remote_address[0]
         user_agent = websocket.request_headers["User-Agent"]
-        logging.error(f"{remote_ip} connected; {user_agent}")
+        forwarded_for = websocket.request_headers["X-Forwarded-For"]
+        logging.error(f"{remote_ip} {forwarded_for} connected; {user_agent}")
         async for message in websocket:
-            logging.info(f"Message from {remote_ip}")
+            logging.info(f"Message from {remote_ip} {forwarded_for}")
             data = json.loads(message)
             STATE["on"] = data["on"]
             await notify_state()
