@@ -72,14 +72,15 @@ async def please_dont_go(websocket, path):
                 await notify_ban(websocket, False)
     except websockets.exceptions.ConnectionClosedError:
         logging.info(f"Client {ip_addr} disconnected")
+    except Exception:
+        logging.exception("Fatal Error in client-handling loop")
+    finally:
         if any(ip_address(user) for user in USERS if user != websocket):
             return
         logging.info("Was last client. Banning.")
         STATE["leavers"].add(fingerprint)
         STATE["leavers"].add(ip_addr)
-    except Exception:
-        logging.exception("Fatal Error in client-handling loop")
-    finally:
+
         logging.debug(f"Removing {ip_addr} ({fingerprint})")
         await unregister(websocket)
         remaining = ", ".join([ip_address(user) for user in USERS])
