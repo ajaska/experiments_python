@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import random
 import websockets
 
 logging.basicConfig(
@@ -9,8 +10,15 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
+# Board state
 STATE = {}  # Opaque string from clients. Hope we don't get junk data
 
+COLORS = ["red", "orange", "yellow", "green", "blue", "purple", "cyan", "magenta"]
+# Cursor state. Maybe names in future
+# { color: string; widget: string; rel_x: number (0 to 1); rel_y: number }
+USER_STATE = {}
+
+# Websockets
 USERS = set()
 FINGERPRINTS = {}
 
@@ -19,9 +27,22 @@ def state_event(model):
     return json.dumps({"type": "state", "model": model, "state": STATE[model]})
 
 
+def cursor_event(user):
+    cursors = [
+        USER_STATE[other_user]
+        for other_user in USER_STATE.keys()
+        if other_user is not user
+    ]
+    return json.dumps({"type": "cursor", "cursors": cursors})
+
+
 async def notify_state(user):
     for model in STATE.keys():
         await user.send(state_event(model))
+
+
+async def notify_cursors(user):
+    await user.send(cursor_event(user))
 
 
 async def notify_except(user, message):
@@ -32,10 +53,17 @@ async def notify_except(user, message):
 
 async def register(websocket):
     USERS.add(websocket)
+    USER_STATE[websocket] = {
+        "widget": None,
+        "rel_x": 0,
+        "rel_y": 0,
+        "color": random.choice(COLORS),
+    }
 
 
 async def unregister(websocket):
     USERS.remove(websocket)
+    del USER_STATE[websocket]
 
 
 def ip_address(websocket):
@@ -57,6 +85,7 @@ async def music_playground(websocket, path):
         logging.info(f"{ip_addr} connected; {user_agent(websocket)}")
 
         await notify_state(websocket)
+        await notify_cursors(websocket)
 
         async for message in websocket:
             logging.info(f"Received new state from {ip_addr} {message}")
@@ -72,13 +101,22 @@ async def music_playground(websocket, path):
             elif data["type"] == "sound":
                 # Send it on back
                 await notify_except(websocket, message)
+            elif data["type"] == "cursor":
+                USER_STATE[websocket].update(data["cursor"])
+                for user in USERS:
+                    if user is not websocket:
+                        await notify_cursors(user)
+
     except websockets.exceptions.ConnectionClosedError:
+        # Can't count on clients to disconnect gracefully; handle that code in finally
         pass
     except Exception:
         logging.exception("Fatal Error in client-handling loop")
     finally:
         logging.info(f"Client {ip_addr} disconnected")
         await unregister(websocket)
+        for user in USERS:
+            await notify_cursors(websocket)
 
 
 start_server = websockets.serve(music_playground, "0.0.0.0", 1238)
