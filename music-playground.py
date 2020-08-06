@@ -100,15 +100,19 @@ async def music_playground(websocket, path):
                     await notify_except(websocket, state_event(model))
             elif data["type"] == "sound":
                 # Send it on back
-                await notify_except(websocket, message)
+                # await notify_except(websocket, message)
+                pass
+                # Do nothing because it's not great
             elif data["type"] == "cursor":
                 USER_STATE[websocket].update(data["cursor"])
                 for user in USERS:
                     if user is not websocket:
                         await notify_cursors(user)
 
+    # Can't count on clients to disconnect gracefully; handle that code in finally
     except websockets.exceptions.ConnectionClosedError:
-        # Can't count on clients to disconnect gracefully; handle that code in finally
+        pass
+    except websockets.exceptions.ConnectionClosedOk:
         pass
     except Exception:
         logging.exception("Fatal Error in client-handling loop")
