@@ -5,13 +5,13 @@ description = ""
 authors = ["Arlan Jaska <ajaska@berkeley.edu>"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
-websockets = "^8.1"
+python = "^3.12"
+websockets = "^14.0"
 
 [tool.poetry.dev-dependencies]
-black = "^19.10b0"
-flake8 = "^3.8.3"
+black = "^24.0"
+flake8 = "^7.0"
 
 [build-system]
-requires = ["poetry>=0.12"]
-build-backend = "poetry.masonry.api"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

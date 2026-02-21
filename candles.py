@@ -31,9 +31,9 @@ def state_event():
 
 
 async def notify_state():
-    if USERS:  # asyncio.wait doesn't accept an empty list
+    if USERS:
         message = state_event()
-        await asyncio.wait([user.send(message) for user in USERS])
+        await asyncio.gather(*[user.send(message) for user in USERS])
 
 
 async def register(websocket):
@@ -44,14 +44,14 @@ async def unregister(websocket):
     USERS.remove(websocket)
 
 
-async def candles(websocket, path):
+async def candles(websocket):
     await register(websocket)
     try:
         await websocket.send(state_event())
 
         remote_ip = websocket.remote_address[0]
-        user_agent = websocket.request_headers["User-Agent"]
-        forwarded_for = websocket.request_headers.get("X-Forwarded-For")
+        user_agent = websocket.request.headers["User-Agent"]
+        forwarded_for = websocket.request.headers.get("X-Forwarded-For")
         logging.error(f"{remote_ip} {forwarded_for} connected; {user_agent}")
 
         ip_addr = forwarded_for or remote_ip
@@ -108,8 +108,9 @@ async def unlight_old_candles():
         await asyncio.sleep(5)
 
 
-start_server = websockets.serve(candles, "0.0.0.0", 1236)
+async def main():
+    async with websockets.serve(candles, "0.0.0.0", 1236):
+        await unlight_old_candles()  # already loops forever
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_until_complete(unlight_old_candles())
-asyncio.get_event_loop().run_forever()
+
+asyncio.run(main())

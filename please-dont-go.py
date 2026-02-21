@@ -31,16 +31,16 @@ async def unregister(websocket):
 
 def ip_address(websocket):
     remote_ip = websocket.remote_address[0]
-    forwarded_for = websocket.request_headers.get("X-Forwarded-For")
+    forwarded_for = websocket.request.headers.get("X-Forwarded-For")
     ip_addr = forwarded_for or remote_ip
     return ip_addr
 
 
 def user_agent(websocket):
-    return websocket.request_headers["User-Agent"]
+    return websocket.request.headers["User-Agent"]
 
 
-async def please_dont_go(websocket, path):
+async def please_dont_go(websocket):
     await register(websocket)
     ip_addr = None
     fingerprint = None
@@ -87,7 +87,9 @@ async def please_dont_go(websocket, path):
         logging.debug(f"Remaining clients: [{remaining}]")
 
 
-start_server = websockets.serve(please_dont_go, "0.0.0.0", 1237)
+async def main():
+    async with websockets.serve(please_dont_go, "0.0.0.0", 1237):
+        await asyncio.Future()  # run forever
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+
+asyncio.run(main())

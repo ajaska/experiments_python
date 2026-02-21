@@ -17,9 +17,9 @@ def state_event():
 
 
 async def notify_state():
-    if USERS:  # asyncio.wait doesn't accept an empty list
+    if USERS:
         message = state_event()
-        await asyncio.wait([user.send(message) for user in USERS])
+        await asyncio.gather(*[user.send(message) for user in USERS])
 
 
 async def register(websocket):
@@ -30,13 +30,13 @@ async def unregister(websocket):
     USERS.remove(websocket)
 
 
-async def lightswitch(websocket, path):
+async def lightswitch(websocket):
     await register(websocket)
     try:
         await websocket.send(state_event())
         remote_ip = websocket.remote_address[0]
-        user_agent = websocket.request_headers["User-Agent"]
-        forwarded_for = websocket.request_headers["X-Forwarded-For"]
+        user_agent = websocket.request.headers["User-Agent"]
+        forwarded_for = websocket.request.headers["X-Forwarded-For"]
         logging.error(f"{remote_ip} {forwarded_for} connected; {user_agent}")
         async for message in websocket:
             logging.info(f"Message from {remote_ip} {forwarded_for}")
@@ -47,7 +47,9 @@ async def lightswitch(websocket, path):
         await unregister(websocket)
 
 
-start_server = websockets.serve(lightswitch, "0.0.0.0", 1235)
+async def main():
+    async with websockets.serve(lightswitch, "0.0.0.0", 1235):
+        await asyncio.Future()  # run forever
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+
+asyncio.run(main())

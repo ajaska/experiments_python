@@ -47,8 +47,8 @@ async def notify_cursors(user):
 
 async def notify_except(user, message):
     users = [other_user for other_user in USERS if other_user is not user]
-    if users:  # asyncio.wait doesn't accept an empty list
-        await asyncio.wait([user.send(message) for user in users])
+    if users:
+        await asyncio.gather(*[user.send(message) for user in users])
 
 
 async def register(websocket):
@@ -68,16 +68,16 @@ async def unregister(websocket):
 
 def ip_address(websocket):
     remote_ip = websocket.remote_address[0]
-    forwarded_for = websocket.request_headers.get("X-Forwarded-For")
+    forwarded_for = websocket.request.headers.get("X-Forwarded-For")
     ip_addr = forwarded_for or remote_ip
     return ip_addr
 
 
 def user_agent(websocket):
-    return websocket.request_headers["User-Agent"]
+    return websocket.request.headers["User-Agent"]
 
 
-async def music_playground(websocket, path):
+async def music_playground(websocket):
     await register(websocket)
     ip_addr = None
     try:
@@ -123,7 +123,9 @@ async def music_playground(websocket, path):
             await notify_cursors(websocket)
 
 
-start_server = websockets.serve(music_playground, "0.0.0.0", 1238)
+async def main():
+    async with websockets.serve(music_playground, "0.0.0.0", 1238):
+        await asyncio.Future()  # run forever
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+
+asyncio.run(main())
