@@ -3,12 +3,13 @@ name = "experiments_python"
 version = "0.1.0"
 description = ""
 authors = ["Arlan Jaska <ajaska@berkeley.edu>"]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"
 websockets = "^14.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 black = "^24.0"
 flake8 = "^7.0"
 
